@@ -7,6 +7,7 @@ import 'package:sar_app/src/providers/persona_provider.dart';
 import 'package:sar_app/src/providers/solicitud_provider.dart';
 import 'package:sar_app/src/utils/utils.dart' as utils;
 import 'package:flutter/material.dart';
+import 'package:progress_dialog/progress_dialog.dart';
 
 class SolicitudCreatePage extends StatefulWidget {
   static final routeName = 'solicituCreate';
@@ -34,6 +35,8 @@ class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
   PersonaProvider personaProvider = new PersonaProvider();
   SolicitudProvider solicitudProvider = new SolicitudProvider();
 
+  ProgressDialog pr;
+
   @override
   void initState() {
     this.mostrarPersona();
@@ -43,9 +46,15 @@ class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
 
   @override
   Widget build(BuildContext context) {
+    pr = ProgressDialog(context, type: ProgressDialogType.Normal,);
+    pr.style(message: 'Espere por favor...');
+
     return Scaffold(
       appBar: AppBar(
         title: Text('CREAR SOLICITUD'),
+        actions: <Widget>[
+          IconButton(icon: Icon(Icons.pages), onPressed: () => pr.show())
+        ],
       ),
       body: SingleChildScrollView(
         child: Container(
@@ -348,6 +357,7 @@ class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
   }
 
   void  _registrarSolicitud() async{
+    pr.show();
     await solicitudProvider.create({
       'sol_fecha_entrega': utils.getFechaActual(),
       'sol_fecha_devolucion': _fechaDevoluion,
@@ -355,11 +365,13 @@ class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
       'sol_per_id': getPersona(_ci)["per_id"],
       'detalles': _detalles
     });
+    pr.hide();
     print('ci: $_ci');
     print('fecha entrega: ${utils.getFechaActual()}');
     print('fecha: $_fechaDevoluion');
     print('obser: $_observacion');
     print('detalles: $_detalles');
+    utils.mensajeToast('Se registro correctamente');
     Navigator.pushNamedAndRemoveUntil(context, HomePage.routeName, ModalRoute.withName(LoginPage.routeName));
   }
 
