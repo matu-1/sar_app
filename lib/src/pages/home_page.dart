@@ -36,9 +36,7 @@ class HomePage extends StatelessWidget {
     return FutureBuilder(
       future: solicitudProvider.getAll(),
       builder: (BuildContext context, AsyncSnapshot<List> snapshot) {
-        if(!snapshot.hasData){
-          return Center(child: CircularProgressIndicator());
-        }else{
+        if(snapshot.hasData){
           final solicitudes = snapshot.data;
           return ListView.builder(
             itemCount: solicitudes.length,
@@ -46,7 +44,13 @@ class HomePage extends StatelessWidget {
               return _solicitudBox(solicitudes[i]);
             }
           );
+        }else if(snapshot.hasError){
+          return Container(
+            padding: EdgeInsets.all(10),
+            child: Text('${snapshot.error}')
+          );
         }
+        return Center(child: CircularProgressIndicator());
       },
     );
   }

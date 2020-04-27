@@ -1,7 +1,10 @@
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:sar_app/src/pages/home_page.dart';
+import 'package:sar_app/src/pages/login_page.dart';
 import 'package:sar_app/src/providers/equipo_provider.dart';
 import 'package:sar_app/src/providers/persona_provider.dart';
+import 'package:sar_app/src/providers/solicitud_provider.dart';
 import 'package:sar_app/src/utils/utils.dart' as utils;
 import 'package:flutter/material.dart';
 
@@ -14,8 +17,8 @@ class SolicitudCreatePage extends StatefulWidget {
 
 class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
   List _personas = [];
-  List _equipos = ['goku', 'naruto', 'onepiece', 'matias', 'sdfdsfdsfds'];
-  List _equiposBusqueda ;
+  List _equipos = [];
+  List _equiposBusqueda = [];
   String _ci = '';
   String _fechaDevoluion = '';
   String _observacion = '';
@@ -24,13 +27,12 @@ class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
   File _imagen ; 
   dynamic _equipo = '';
 
-  bool _isClose = true;
-
   TextEditingController textEditingControllerFecha = new TextEditingController();
   TextEditingController textEditingControllerEquipo = new TextEditingController();
   
   EquipoProvider equipoProvider = new EquipoProvider();
   PersonaProvider personaProvider = new PersonaProvider();
+  SolicitudProvider solicitudProvider = new SolicitudProvider();
 
   @override
   void initState() {
@@ -77,7 +79,7 @@ class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
 
   void mostrarEquipo() async {
     _equipos = await equipoProvider.getAll();
-    _equiposBusqueda = _equipo;
+    _equiposBusqueda = _equipos;
   }
 
   Widget  _crearForm(BuildContext context){
@@ -297,14 +299,12 @@ class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
   void _imagenSelect(StateSetter setState) async {
     final image = await ImagePicker.pickImage(source: ImageSource.camera);
     if(image == null) return;
-    setState(() {
-      _imagen = image;
-    });
+    setState(() => _imagen = image );
   }
 
   void _agregardetalleSolicitud(){
     final detalle = {
-      'foto': '',
+      'foto': _imagen,
       'cantidad': _cantidad,
       'codigo': _equipo['equ_codigo'],
       'id': _equipo['equ_id'],
@@ -313,6 +313,7 @@ class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
     setState(() {
       _detalles.add(detalle); 
       textEditingControllerEquipo.text = '';
+      _imagen = null;
     });
     print(_detalles);
   }
@@ -346,12 +347,20 @@ class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
     );
   }
 
-  void  _registrarSolicitud(){
+  void  _registrarSolicitud() async{
+    await solicitudProvider.create({
+      'sol_fecha_entrega': utils.getFechaActual(),
+      'sol_fecha_devolucion': _fechaDevoluion,
+      'sol_observaciones_entrega': _observacion,
+      'sol_per_id': getPersona(_ci)["per_id"],
+      'detalles': _detalles
+    });
     print('ci: $_ci');
     print('fecha entrega: ${utils.getFechaActual()}');
     print('fecha: $_fechaDevoluion');
     print('obser: $_observacion');
     print('detalles: $_detalles');
+    Navigator.pushNamedAndRemoveUntil(context, HomePage.routeName, ModalRoute.withName(LoginPage.routeName));
   }
 
   Widget _detalleSolicitudBox(detalle) {
@@ -432,10 +441,11 @@ class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
                           ),
                         ),
                         IconButton(
-                          icon: (_isClose)?
-                          Icon(Icons.close)
-                          :Icon(Icons.open_in_browser), 
-                          onPressed: () => Navigator.pop(context)
+                          icon: Icon(Icons.close),
+                          onPressed: () { 
+                            Navigator.pop(context);
+                            _equiposBusqueda = _equipos;
+                          }
                         ),
                         Expanded(child: Container()),
                       ],
@@ -452,18 +462,14 @@ class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
   }
 
   void _buscarEquipo(String texto, StateSetter setState) {
-    print(texto);
+    texto = texto.toUpperCase();
     List newEquipos = [];
     _equipos.forEach((equipo) {
-      var codigo = equipo['equ_codigo'];
-      int index = codigo.toString().indexOf(texto);
+      var codigo = equipo['equ_codigo'].toString().toUpperCase();
+      int index = codigo.indexOf(texto);
       if(index > -1) newEquipos.add(equipo);
     });
-    print(texto);
-    setState(() {
-      _isClose = false;
-     _equiposBusqueda = newEquipos;
-    });
+    setState(() => _equiposBusqueda = newEquipos );
     print('equipos busqueda:');
     print(_equiposBusqueda);
 
@@ -471,31 +477,18 @@ class _SolicitudCreatePageState extends State<SolicitudCreatePage> {
 
   Widget _crearCodigosList(){
     return SingleChildScrollView(
-      child: FutureBuilder(
-        future: equipoProvider.getAll(),
-        builder: (BuildContext context, AsyncSnapshot<List> snapshot) {
-          if(!snapshot.hasData){
-            return Container(
-              padding: EdgeInsets.only(top: 50,bottom: 20),
-              child: Center(child: CircularProgressIndicator(),)
-            );
-          }else{
-            _equipos = _equiposBusqueda = snapshot.data;
-            return Wrap(
-              children: _equiposBusqueda.map((value) => GestureDetector(
-                child: _codigoBox(value),
-                onTap: (){
-                  setState(() { 
-                    _equipo = value; 
-                    textEditingControllerEquipo.text = value['equ_codigo'];
-                  });
-                  Navigator.pop(context);
-                },
-              )).toList(),
-            );
-          }
-         
-        },
+      child: Wrap(
+        children: _equiposBusqueda.map((value) => GestureDetector(
+          child: _codigoBox(value),
+          onTap: (){
+            setState(() { 
+              _equipo = value; 
+              textEditingControllerEquipo.text = value['equ_codigo'];
+              _equiposBusqueda = _equipos;
+            });
+            Navigator.pop(context);
+          },
+        )).toList(),
       )
     );
   }

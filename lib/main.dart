@@ -22,7 +22,7 @@ class MyApp extends StatelessWidget {
         const Locale.fromSubtags(languageCode: 'zh'), // Chinese *See Advanced Locales below*
       ],
       debugShowCheckedModeBanner: false,
-      initialRoute: SolicitudCreatePage.routeName,
+      initialRoute: LoginPage.routeName,
       routes: {
         LoginPage.routeName: (BuildContext context) => LoginPage(),
         HomePage.routeName: (BuildContext context) => HomePage(),
